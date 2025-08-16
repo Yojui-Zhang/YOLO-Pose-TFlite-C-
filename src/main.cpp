@@ -53,13 +53,13 @@ int main(int argc, char **argv)
 // ==============================================================
 #ifdef _openCVcap
     // 初始化影片路徑
-    // const char *inputVideoPath = "../video/vecow-demo.mp4";
+    const char *inputVideoPath = "../video/vecow-demo.mp4";
     // const char *inputVideoPath = "../video/test.jpg";
     // const char *outputVideoPath = "output.mp4";
 
     // 打開輸入影片
-    // cv::VideoCapture cap(inputVideoPath);
-    cv::VideoCapture cap(0);
+    cv::VideoCapture cap(inputVideoPath);
+    // cv::VideoCapture cap(0);
 
     if (!cap.isOpened()) {
         printf("can't open openCV camera\n");

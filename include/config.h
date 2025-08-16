@@ -34,6 +34,7 @@ cv::Rect rect(0, 0, output_video_width, output_video_height);
 #define PROB_THRESHOLD 0.4
 #define NMS_THRESHOLD_BBOX 0.4
 #define NMS_THRESHOLD_LANE 0.85
+#define Keypoint_NUM 15
 
 #ifdef _640640
     #define INPUT_WIDTH 640

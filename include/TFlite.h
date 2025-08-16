@@ -22,6 +22,7 @@ struct Object {
 class PoseDetector {
 public:
     static constexpr const char* class_names[NUM_CLASS] = {"roadlane", "car", "rider", "person", "light", "signC", "signT"};
+    // static constexpr const char* class_names[NUM_CLASS] = {"roadlane", "car", "rider", "person", "light", "signC"};
 
     // 模型與資料
     std::unique_ptr<tflite::FlatBufferModel> model;
@@ -190,8 +191,8 @@ void PoseDetector::nms(std::vector<Object> &objects, float nms_threshold_bbox, f
 void PoseDetector::generate_proposals(const float *data, float prob_threshold, std::vector<Object> &objects, float scale, int top, int left)
 {
 
-    const int num_keypoints = 15;
-    const int kpt_start_channel = 4 + 1 + NUM_CLASS - 1;
+    const int num_keypoints = Keypoint_NUM;
+    const int kpt_start_channel = 4 + NUM_CLASS;
 
     for (int i = 0; i < NUM_BOXES; ++i)
     {
@@ -202,7 +203,6 @@ void PoseDetector::generate_proposals(const float *data, float prob_threshold, s
         float x1 = x - w / 2;
         float y1 = y - h / 2;
         cv::Rect rect(cv::Point(x1, y1), cv::Size(w, h));
-
 
         int class_id = -1;
         float max_prob = prob_threshold;
@@ -227,9 +227,9 @@ void PoseDetector::generate_proposals(const float *data, float prob_threshold, s
             for (int k = 0; k < num_keypoints; k++)
             {
                 
-                float kpt_x = ((data[(0 + (k * 3) + kpt_start_channel) * NUM_BOXES + i]) * INPUT_WIDTH - left) * scale ;
-                float kpt_y = ((data[(1 + (k * 3) + kpt_start_channel) * NUM_BOXES + i]) * INPUT_HEIGHT - top) * scale ;
-                float kpt_v = data[(2 + (k * 3) + kpt_start_channel) * NUM_BOXES + i];
+                float kpt_x = (data[(kpt_start_channel + k*3 + 0) * NUM_BOXES + i] * INPUT_WIDTH  - left) * scale;
+                float kpt_y = (data[(kpt_start_channel + k*3 + 1) * NUM_BOXES + i] * INPUT_HEIGHT - top ) * scale;
+                float kpt_v =  data[(kpt_start_channel + k*3 + 2) * NUM_BOXES + i];
 
                 obj.kpts.push_back(cv::Point3f(kpt_x, kpt_y, kpt_v));
             
