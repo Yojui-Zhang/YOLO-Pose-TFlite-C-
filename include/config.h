@@ -30,6 +30,12 @@ cv::Mat rgbImg1(input_video_height, input_video_width, CV_8UC3);
 cv::Mat rgbImg(output_video_height, output_video_width, CV_8UC3); 
 cv::Rect rect(0, 0, output_video_width, output_video_height);
 
+// ================ Classify Set ==========
+int classify_model_width = 60;
+int classify_model_height = 60;
+
+#define classify_NUM_CLASS 18
+
 // ================ Tensorflow Set ==========
 #define NUM_CLASS 7
 #define PROB_THRESHOLD 0.4

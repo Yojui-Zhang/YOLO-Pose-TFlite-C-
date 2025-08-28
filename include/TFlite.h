@@ -1,9 +1,12 @@
-#include <opencv2/opencv.hpp>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
+#include <opencv2/core/ocl.hpp>  // OpenCL 支援
 
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
@@ -13,8 +16,19 @@
 #include "SortTracking.h"
 
 using namespace std;
+using namespace cv;
+using namespace cv::dnn;
 
-SORTTRACKING sorttracking;
+class classifyDetector{
+public:
+    static constexpr const char* class_name_classify[classify_NUM_CLASS] = {"100km", "110km", "30km", "40km", "50km", 
+                                                                            "60km", "70km", "80km", "90km", "car_left", 
+                                                                            "car_normal", "car_right", "car_warning", "light_green", "light_other", 
+                                                                            "light_red", "light_yellow", "sign_other"};
+
+    void classify_init(char* classify_model_path);
+    cv::Mat cropObjects(const Mat& frame, const TrackingBox &obj, int classify_model_width, int classify_model_height);
+};
 
 class PoseDetector {
 public:
@@ -51,12 +65,63 @@ public:
                              int            left, 
                              int            right);
 
-    cv::Mat draw_objects(const cv::Mat &img, const std::vector<Object> &objects);
+    cv::Mat draw_objects(const cv::Mat &img, const std::vector<Object> &objects, int classify_model_width, int classify_model_height);
 
     bool Set_TFlite(const char* model_path);
     void Calculate_Scale(const cv::Mat& frame, int input_width, int input_height);
 };
 
+Net net;
+SORTTRACKING sorttracking;
+classifyDetector classifydetector__;
+
+void classifyDetector::classify_init(char* classify_model_path)
+{
+    #ifdef _GPU_delegate
+    // ================== 啟用 OpenCL 加速 ===================
+    if (cv::ocl::haveOpenCL()) {
+        cv::ocl::setUseOpenCL(true);
+        cout << "OpenCL is enabled!" << endl;
+    } else {
+        cout << "OpenCL is not supported on this device." << endl;
+    }
+
+#endif
+    // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+    net = readNetFromONNX(classify_model_path);
+
+    if (net.empty()) {
+        cerr << "Failed to load ONNX model!" << endl;
+    }
+#ifdef _GPU_delegate
+    // 使用 OpenCL 進行推論加速
+    net.setPreferableBackend(DNN_BACKEND_DEFAULT);  // 讓 OpenCV 自動選擇最佳後端
+    net.setPreferableTarget(DNN_TARGET_OPENCL);     // 指定使用 OpenCL 進行加速
+#endif
+}
+
+// 裁剪偵測到的物件
+cv::Mat classifyDetector::cropObjects(const Mat& frame, const TrackingBox &obj, int classify_model_width, int classify_model_height ) {
+
+    Mat crop_image;
+
+    int width = classify_model_width;
+    int height = classify_model_height;
+
+    // 取得偵測物件的邊界框
+    cv::Rect roi = obj.box;
+
+    // 確保裁剪區域不超過影像邊界
+    roi &= Rect(0, 0, frame.cols, frame.rows);
+
+    // 裁剪影像
+    Mat croppedObject = frame(roi).clone(); // 需要 clone() 避免引用原圖
+
+    resize(croppedObject, crop_image, cv::Size(width, height));
+
+    return crop_image;
+}
 
 void PoseDetector::Calculate_Scale(const cv::Mat& frame, int input_width, int input_height) {
     float scale_x = static_cast<float>(frame.cols) / input_width;
@@ -257,20 +322,61 @@ void PoseDetector::get_input_data_fp32(const cv::Mat &sample, float *input_data,
 
 }
 
-cv::Mat PoseDetector::draw_objects(const cv::Mat &img, const std::vector<Object> &objects)
+cv::Mat PoseDetector::draw_objects(const cv::Mat &img, const std::vector<Object> &objects, int classify_model_width, int classify_model_height)
 {
+
+
     cv::Mat image = img.clone();
 
     std::vector<TrackingBox> TrackingResult = sorttracking.TrackingResult(objects);
 
     for (const auto &obj : TrackingResult)
     {
+        std::string label_txt;
+        bool classify_light__ = false;
+        int traffic_class_num;
+
         if(obj.class_id != 0){
+
+            if((obj.class_id == 1 && obj.box.x >= 550 && obj.box.x <= 730) || obj.class_id == 4 || obj.class_id == 5 || obj.class_id == 6 ){
+
+                Mat crop_image;
+                crop_image = classifydetector__.cropObjects(image, obj, classify_model_width, classify_model_height);  //to crop_image
+
+                // 調整輸入大小 (根據 ONNX 模型需求)
+                Mat blob;
+                Size inputSize(classify_model_width, classify_model_height);  // 根據模型需求調整
+                blobFromImage(crop_image, blob, 1.0 / 255, inputSize, Scalar(), true, false);
+
+                // 設定模型輸入
+                net.setInput(blob);
+
+                Mat classify_output = net.forward();
+
+                // 解析結果
+                Point classId;
+                double confidence;
+                minMaxLoc(classify_output, nullptr, &confidence, nullptr, &classId);
+
+                // cout << "Predicted Class: " << class_name_classify[classId.x] << ", Confidence: " << confidence << endl;
+
+                classify_light__ = true;
+                traffic_class_num = classId.x;
+
+            }
+
             // Draw bbox
             cv::rectangle(image, obj.box, GREEN, 2);
 
             // Draw class label
-            std::string label_txt = cv::format("%s", class_names[obj.class_id]);
+            if(classify_light__ == false){
+                label_txt = cv::format("%s", class_names[obj.class_id]);
+            }
+            else if(classify_light__ == true){
+                label_txt = cv::format("%s", classifydetector__.class_name_classify[traffic_class_num]);
+            }
+
+
             int baseline = 0;
             cv::Size textSize = cv::getTextSize(label_txt, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
             cv::Point textOrg(obj.box.x, obj.box.y - 5);

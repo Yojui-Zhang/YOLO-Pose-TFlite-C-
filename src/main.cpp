@@ -49,12 +49,15 @@ PoseDetector pose;
 int main(int argc, char **argv)
 {
 
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <model_path> " << std::endl;
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <LanePose_Model_Path>  <Classify_Model_Path>" << std::endl;
         return 1;
     }
 
-    const char* model_path = argv[1];
+    const char* lanepose_model_path = argv[1];
+    char* classify_model_path = argv[2];
+
+    classifydetector__.classify_init(classify_model_path);
 
 // ==============================================================
 #ifdef _openCVcap
@@ -91,7 +94,7 @@ int main(int argc, char **argv)
     write_video(output_video_width, output_video_height, output_video_fps, "Output_video.mp4");
 #endif
 
-    if (!pose.Set_TFlite(model_path))
+    if (!pose.Set_TFlite(lanepose_model_path))
         return -1;
 
     pose.Calculate_Scale(frame, INPUT_WIDTH, INPUT_HEIGHT);
@@ -145,7 +148,7 @@ int main(int argc, char **argv)
 
         pose.nms(yolov8_objects, NMS_THRESHOLD_BBOX, NMS_THRESHOLD_LANE);
 
-        Output_frame = pose.draw_objects(frame, yolov8_objects);
+        Output_frame = pose.draw_objects(frame, yolov8_objects, classify_model_width, classify_model_height);
 
         end = clock();
         TF_invoke_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
