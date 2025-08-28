@@ -41,6 +41,13 @@
     int v4l2res = v4l2init(V4L2_cap_num);
 #endif
 
+#ifdef _opengl
+    static unsigned char *outputRgbaMem;
+    extern void glinit(void);                                           // 初始化OpenGL
+    extern void swap_egl(void);                                         // 使用EGL顯示畫面
+    extern void imageShow(int width, int height, unsigned char rgb[]);  // OpenGL打畫面
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -87,6 +94,13 @@ int main(int argc, char **argv)
 #ifdef _v4l2cap
     frame = v4l2Cam();
     // rgbImg = rgbImg1(rect);
+#endif
+#ifdef _opengl
+    outputRgbaMem = (unsigned char *)calloc(1280 * 720 * 4, sizeof(unsigned char));
+    glinit();
+#else
+    cv::namedWindow("Screen", cv::WINDOW_NORMAL);
+    cv::setWindowProperty("Screen", cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
 #endif
 // ===============================================================
 
@@ -157,8 +171,14 @@ int main(int argc, char **argv)
 #ifdef Write_Video__
         video_writer.write(Output_frame);
 #endif
-
-        cv::imshow ("window",Output_frame);
+#ifdef _opengl
+        outputRgbaMem = Output_frame.data;        
+        imageShow(1280, 720, outputRgbaMem);
+        swap_egl();
+#else
+        cv::resize(Output_frame,Output_frame,cv::Size(output_video_width, output_video_height));
+        cv::imshow("Screen", Output_frame);
+#endif
 
 	    int key = cv::waitKey(30);              // 等待 30 毫秒
         if (key == 32) {                        // 空格鍵的 ASCII 代碼為 32

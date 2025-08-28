@@ -1,13 +1,16 @@
 // ============= GPU Accelerate =============
 // #define _GPU_delegate
 
-// ============= write Video ================
+// ============= write Data ================
 // #define Write_Video__
-#define Save_infer_raw_data__
+// #define Save_infer_raw_data__
 
 // ============= Camera Choose ==============
 // #define _v4l2cap
 #define _openCVcap
+
+// ============= Screen Show Choose ==============
+// #define _opengl
 
 // ============= model channel size =========
 // #define _640640
@@ -20,8 +23,8 @@
 #define input_video_height 720
 
 // ============= write image size ===========
-#define output_video_width 1280
-#define output_video_height 720
+#define output_video_width 1920
+#define output_video_height 1080
 #define output_video_fps 30
 
 // ============= V4L2 Set ===================

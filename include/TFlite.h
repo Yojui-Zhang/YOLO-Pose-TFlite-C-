@@ -77,8 +77,7 @@ classifyDetector classifydetector__;
 
 void classifyDetector::classify_init(char* classify_model_path)
 {
-    #ifdef _GPU_delegate
-    // ================== 啟用 OpenCL 加速 ===================
+#ifdef _GPU_delegate
     if (cv::ocl::haveOpenCL()) {
         cv::ocl::setUseOpenCL(true);
         cout << "OpenCL is enabled!" << endl;
@@ -87,8 +86,6 @@ void classifyDetector::classify_init(char* classify_model_path)
     }
 
 #endif
-    // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
-
     net = readNetFromONNX(classify_model_path);
 
     if (net.empty()) {
