@@ -3,15 +3,16 @@
 
 // ============= write Video ================
 // #define Write_Video__
+#define Save_infer_raw_data__
 
 // ============= Camera Choose ==============
 // #define _v4l2cap
 #define _openCVcap
 
 // ============= model channel size =========
-#define _640640
+// #define _640640
 // #define _640384
-// #define _512288
+#define _512288
 // #define _480480
 
 // ============= read image size ============
@@ -33,7 +34,7 @@ cv::Rect rect(0, 0, output_video_width, output_video_height);
 #define NUM_CLASS 7
 #define PROB_THRESHOLD 0.4
 #define NMS_THRESHOLD_BBOX 0.4
-#define NMS_THRESHOLD_LANE 0.85
+#define NMS_THRESHOLD_LANE 0.8
 #define Keypoint_NUM 15
 
 #ifdef _640640
@@ -51,7 +52,7 @@ cv::Rect rect(0, 0, output_video_width, output_video_height);
 #ifdef _512288
     #define INPUT_WIDTH 512
     #define INPUT_HEIGHT 288
-    #define NUM_BOXES 3024
+    #define NUM_BOXES 3456
 #endif
 
 #ifdef _480480

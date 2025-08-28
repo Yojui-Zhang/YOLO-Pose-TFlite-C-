@@ -10,19 +10,15 @@
 #include <tensorflow/lite/model.h>
 #include <tensorflow/lite/delegates/external/external_delegate.h>
 
+#include "SortTracking.h"
+
 using namespace std;
 
-struct Object {
-    int class_id;
-    float score;
-    cv::Rect box;
-    std::vector<cv::Point3f> kpts;  // x, y, visibility
-};
+SORTTRACKING sorttracking;
 
 class PoseDetector {
 public:
     static constexpr const char* class_names[NUM_CLASS] = {"roadlane", "car", "rider", "person", "light", "signC", "signT"};
-    // static constexpr const char* class_names[NUM_CLASS] = {"roadlane", "car", "rider", "person", "light", "signC"};
 
     // 模型與資料
     std::unique_ptr<tflite::FlatBufferModel> model;
@@ -192,10 +188,12 @@ void PoseDetector::generate_proposals(const float *data, float prob_threshold, s
 {
 
     const int num_keypoints = Keypoint_NUM;
+    const int class_start_channel = 4;
     const int kpt_start_channel = 4 + NUM_CLASS;
 
     for (int i = 0; i < NUM_BOXES; ++i)
     {
+
         float x = (data[0 * NUM_BOXES + i] * INPUT_WIDTH - left) * scale;
         float y = (data[1 * NUM_BOXES + i] * INPUT_HEIGHT - top) * scale;
         float w = (data[2 * NUM_BOXES + i]) * INPUT_WIDTH * scale;
@@ -208,7 +206,7 @@ void PoseDetector::generate_proposals(const float *data, float prob_threshold, s
         float max_prob = prob_threshold;
         for (int j = 0; j < NUM_CLASS; ++j)
         {
-            float prob = data[(4 + j) * NUM_BOXES + i];
+            float prob = data[(class_start_channel + j) * NUM_BOXES + i];
             if (prob > max_prob)
             {
                 class_id = j;
@@ -263,7 +261,9 @@ cv::Mat PoseDetector::draw_objects(const cv::Mat &img, const std::vector<Object>
 {
     cv::Mat image = img.clone();
 
-    for (const auto &obj : objects)
+    std::vector<TrackingBox> TrackingResult = sorttracking.TrackingResult(objects);
+
+    for (const auto &obj : TrackingResult)
     {
         if(obj.class_id != 0){
             // Draw bbox

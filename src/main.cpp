@@ -1,7 +1,10 @@
-// 基本輸入輸出
+// 基本函式
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
+#include <string>
+#include <vector>
 
 // OpenCV
 #include <opencv2/core/core.hpp>
@@ -13,6 +16,7 @@
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/delegates/external/external_delegate.h"
+#include "tensorflow/lite/c/common.h"
 
 #ifdef _GPU_delegate
     #include "tensorflow/lite/delegates/gpu/delegate.h"
@@ -29,6 +33,9 @@
 #include "config.h"
 #include "TFlite.h"
 #include "write_video.h"
+#include "debug.h"
+
+
 #ifdef _v4l2cap
     #include "V4L2_define.h"        
     int v4l2res = v4l2init(V4L2_cap_num);
@@ -38,7 +45,6 @@ using namespace std;
 using namespace cv;
 
 PoseDetector pose;
-
 
 int main(int argc, char **argv)
 {
@@ -54,7 +60,7 @@ int main(int argc, char **argv)
 #ifdef _openCVcap
     // 初始化影片路徑
     const char *inputVideoPath = "../video/vecow-demo.mp4";
-    // const char *inputVideoPath = "../video/test.jpg";
+    // const char *inputVideoPath = "../video/s3_yuntech_01_0047.jpg";
     // const char *outputVideoPath = "output.mp4";
 
     // 打開輸入影片
@@ -73,6 +79,7 @@ int main(int argc, char **argv)
 
     cap >> frame;
     cv::resize(frame, frame, cv::Size(input_video_width, input_video_height));
+
 #endif
 #ifdef _v4l2cap
     frame = v4l2Cam();
@@ -97,7 +104,6 @@ int main(int argc, char **argv)
 
         start = clock();
 
-
 #ifdef _openCVcap
         cap >> frame;
 #endif
@@ -112,7 +118,6 @@ int main(int argc, char **argv)
                          pose.mean, pose.scale,
                          pose.new_width, pose.new_height,
                          pose.top, pose.bottom, pose.left, pose.right);
-        
 
         start_invok = clock();
 
@@ -123,6 +128,13 @@ int main(int argc, char **argv)
 
         end_invok = clock();
         std::cout << "After invoke: " << ((double) (end_invok - start_invok)) / CLOCKS_PER_SEC << std::endl;
+
+#ifdef Save_infer_raw_data__
+        if (!SaveOutputTensorToTxt(pose.interpreter.get(), /*output_index=*/0,
+                                "yolov8_output.txt")) {
+            std::cerr << "SaveOutputTensorToTxt failed\n";
+        }
+#endif
 
         std::vector<Object> yolov8_objects;
         pose.generate_proposals(pose.yolov8_output,
