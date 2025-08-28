@@ -1,5 +1,7 @@
-**Ubuntu 須安裝gl**
+**Ubuntu 須安裝gl 套件**
+
 *sudo apt-get install libglfw3 libglfw3-dev*
+
 
 # Version history
 
