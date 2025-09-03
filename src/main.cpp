@@ -169,6 +169,7 @@ int main(int argc, char **argv)
         cout << "Time taken: " << TF_invoke_time_used << "seconds"  << "\n\n" << endl;
 
 #ifdef Write_Video__
+        cv::resize(Output_frame,Output_frame,cv::Size(output_video_width, output_video_height));
         video_writer.write(Output_frame);
 #endif
 #ifdef _opengl

@@ -319,6 +319,91 @@ void PoseDetector::get_input_data_fp32(const cv::Mat &sample, float *input_data,
 
 }
 
+// ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+static inline bool valid_idx(int idx, int n) { return 0 <= idx && idx < n; }
+
+// 車架框
+auto draw_edge(cv::Mat& img,
+                     const std::vector<cv::Point>& P,
+                     const std::vector<int>& V,
+                     int i, int j,
+                     const cv::Scalar& color, int thickness=2)
+{
+    if (i < 0 || j < 0 || i >= (int)P.size() || j >= (int)P.size()) return;
+    // if (V[i] > 0 && V[j] > 0) { // v=1/2 視為可見
+        cv::line(img, P[i], P[j], color, thickness, cv::LINE_AA);
+    // }
+};
+
+// 車行進方向
+void draw_edge_arrow(cv::Mat& img,
+                     const std::vector<cv::Point>& P,
+                     const std::vector<int>& V,
+                     int i, int j, int k, int l,
+                     const cv::Scalar& color, int thickness = 2,
+                     float len_scale = 0.35f, float tip_len = 0.28f)
+{
+    const int N = static_cast<int>(P.size());
+    if (!valid_idx(i,N) || !valid_idx(j,N) || !valid_idx(k,N) || !valid_idx(l,N)) return;
+
+    //（可選）若要考慮可見度，把這兩行打開
+    // if (!V.empty() && (V[i]==0 || V[j]==0 || V[k]==0 || V[l]==0)) return;
+
+    // 1) 先畫底面前緣線 i-j（你也可以視覺上加一條 k-l）
+    cv::line(img, P[i], P[j], color, thickness, cv::LINE_AA);
+    // cv::line(img, P[k], P[l], color, thickness, cv::LINE_AA); // 若也想畫後緣，打開
+
+    // 2) 計算前/後緣中點
+    cv::Point2f front_mid = 0.5f * (cv::Point2f(P[i]) + cv::Point2f(P[j]));
+    cv::Point2f rear_mid  = 0.5f * (cv::Point2f(P[k]) + cv::Point2f(P[l]));
+
+    // 3) 決定方向：由後 → 前（車頭方向）
+    cv::Point2f dir = front_mid - rear_mid;
+    float d = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+    if (d < 1.f) return;           // 太短就不畫
+    dir *= (1.0f / d);
+
+    // 4) 箭頭長度：取車長 d 的 len_scale 倍，至少 30 像素
+    float L = std::max(30.0f, len_scale * d);
+
+    // 5) 以「底部寬的中央（前緣中點）」為起點，往車頭方向畫箭頭
+    cv::Point p0(cvRound(front_mid.x), cvRound(front_mid.y));
+    cv::Point p1(cvRound(front_mid.x + dir.x * L),
+                 cvRound(front_mid.y + dir.y * L));
+
+    cv::arrowedLine(img, p0, p1, color, thickness, cv::LINE_AA, 0, tip_len);
+}
+
+void draw_car_cuboid(cv::Mat& image, const std::vector<cv::Point>& P, const std::vector<int>& V)
+{
+    // 索引（依你的資料集調整）
+    const int ROOF_FL=9, ROOF_FR=10, ROOF_RL=11, ROOF_RR=12;
+    const int BTM_FL=0,  BTM_FR=1,  BTM_RL=2,  BTM_RR=3  ; // 用頭/尾燈近似底部四角
+
+    // 上方面（roof）
+    draw_edge(image, P, V, ROOF_FL, ROOF_FR, GREEN);
+    draw_edge(image, P, V, ROOF_FR, ROOF_RR, GREEN);
+    draw_edge(image, P, V, ROOF_RR, ROOF_RL, GREEN);
+    draw_edge(image, P, V, ROOF_RL, ROOF_FL, GREEN);
+
+    // 下方面（bumper line，以前燈/尾燈近似）
+    draw_edge(image, P, V, BTM_FL, BTM_FR, CYAN);
+    draw_edge(image, P, V, BTM_FR, BTM_RR, CYAN);
+    draw_edge(image, P, V, BTM_RR, BTM_RL, CYAN);
+    draw_edge(image, P, V, BTM_RL, BTM_FL, CYAN);
+
+    // 立柱（pillar）
+    draw_edge(image, P, V, ROOF_FL, BTM_FL, RED);
+    draw_edge(image, P, V, ROOF_FR, BTM_FR, RED);
+    draw_edge(image, P, V, ROOF_RR, BTM_RR, RED);
+    draw_edge(image, P, V, ROOF_RL, BTM_RL, RED);
+
+    // 行進方向
+    // draw_edge_arrow(image, P, V, BTM_FL, BTM_FR, BTM_RL, BTM_RR, ARROW_COLOR);
+}
+
+// ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 cv::Mat PoseDetector::draw_objects(const cv::Mat &img, const std::vector<Object> &objects, int classify_model_width, int classify_model_height)
 {
 
@@ -333,9 +418,30 @@ cv::Mat PoseDetector::draw_objects(const cv::Mat &img, const std::vector<Object>
         bool classify_light__ = false;
         int traffic_class_num;
 
-        if(obj.class_id != 0){
+        if(obj.class_id == 1){
 
-            if((obj.class_id == 1 && obj.box.x >= 550 && obj.box.x <= 730) || obj.class_id == 4 || obj.class_id == 5 || obj.class_id == 6 ){
+            std::vector<cv::Point> P;
+            std::vector<int> V;
+
+            P.reserve(obj.kpts.size());
+            V.reserve(obj.kpts.size());
+
+            for (const auto& kpt : obj.kpts) {
+                int x = static_cast<int>(kpt.x);
+                int y = static_cast<int>(kpt.y);
+                int v = static_cast<int>(kpt.z);  // 0/1/2
+                P.emplace_back(x, y);
+                V.emplace_back(v);
+
+                // 原本的點可繼續畫
+                // cv::circle(image, cv::Point(x, y), 3, RED, -1);
+            }
+
+            draw_car_cuboid(image, P, V);
+        }
+        else if(obj.class_id != 0){
+
+            if((obj.class_id == 1 && obj.box.x >= 400 && obj.box.x <= 880) || obj.class_id == 4 || obj.class_id == 5 || obj.class_id == 6 ){
 
                 Mat crop_image;
                 crop_image = classifydetector__.cropObjects(image, obj, classify_model_width, classify_model_height);  //to crop_image

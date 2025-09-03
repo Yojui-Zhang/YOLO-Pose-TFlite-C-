@@ -47,7 +47,7 @@ void KalmanTracker::init_kf(StateType stateMat)
 	// *量測噪聲*
 	// 調大 → 更不信偵測，更平滑、反應慢
 	// 調小 → 更信偵測，更靈敏
-	setIdentity(kf.measurementNoiseCov, Scalar::all(1e-3));
+	setIdentity(kf.measurementNoiseCov, Scalar::all(1e-4));
 
 	
 	// initialize state vector with bounding box in [cx,cy,s,r] style

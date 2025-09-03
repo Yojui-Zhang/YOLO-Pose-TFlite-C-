@@ -2,7 +2,7 @@
 // #define _GPU_delegate
 
 // ============= write Data ================
-// #define Write_Video__
+#define Write_Video__
 // #define Save_infer_raw_data__
 
 // ============= Camera Choose ==============
@@ -25,7 +25,7 @@
 // ============= write image size ===========
 #define output_video_width 1920
 #define output_video_height 1080
-#define output_video_fps 30
+#define output_video_fps 15
 
 // ============= V4L2 Set ===================
 #define V4L2_cap_num 8
@@ -41,7 +41,7 @@ int classify_model_height = 60;
 
 // ================ Tensorflow Set ==========
 #define NUM_CLASS 7
-#define PROB_THRESHOLD 0.4
+#define PROB_THRESHOLD 0.5
 #define NMS_THRESHOLD_BBOX 0.4
 #define NMS_THRESHOLD_LANE 0.8
 #define Keypoint_NUM 15
@@ -61,7 +61,7 @@ int classify_model_height = 60;
 #ifdef _512288
     #define INPUT_WIDTH 512
     #define INPUT_HEIGHT 288
-    #define NUM_BOXES 3456
+    #define NUM_BOXES 3024
 #endif
 
 #ifdef _480480
@@ -72,19 +72,21 @@ int classify_model_height = 60;
 
 
 // ================ System Set ================
-const cv::Scalar RED(255, 0, 0);       // 紅色
-const cv::Scalar GREEN(0, 255, 0);     // 綠色
-const cv::Scalar BLUE(0, 0, 255);      // 藍色
-const cv::Scalar YELLOW(255, 255, 0);  // 黃色
-const cv::Scalar CYAN(0, 255, 255);    // 青色
-const cv::Scalar MAGENTA(255, 0, 255); // 品紅色
-const cv::Scalar WHITE(255, 255, 255); // 白色
-const cv::Scalar BLACK(0, 0, 0);       // 黑色
-const cv::Scalar GRAY(128, 128, 128);  // 灰色
-const cv::Scalar ORANGE(255, 165, 0);  // 橙色
-const cv::Scalar PINK(255, 192, 203);  // 粉色
-const cv::Scalar PURPLE(128, 0, 128);  // 紫色
-const cv::Scalar BROWN(165, 42, 42);   // 棕色
+// OpenCV uses BGR order
+const cv::Scalar RED     (  0,   0, 255);
+const cv::Scalar GREEN   (  0, 255,   0);
+const cv::Scalar BLUE    (255,   0,   0);
+const cv::Scalar YELLOW  (  0, 255, 255);
+const cv::Scalar CYAN    (255, 255,   0);
+const cv::Scalar MAGENTA (255,   0, 255);
+const cv::Scalar WHITE   (255, 255, 255);
+const cv::Scalar BLACK   (  0,   0,   0);
+const cv::Scalar GRAY    (128, 128, 128);
+const cv::Scalar ORANGE  (  0, 165, 255);
+const cv::Scalar PINK    (203, 192, 255);
+const cv::Scalar PURPLE  (128,   0, 128);
+const cv::Scalar BROWN   ( 42,  42, 165);
+const cv::Scalar ARROW_COLOR(0, 255, 255); // 黃色
 
 cv::Mat frame(input_video_height, input_video_width, CV_8UC3); 
 cv::Mat Output_frame(input_video_height, input_video_width, CV_8UC3); 
